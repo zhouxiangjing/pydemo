@@ -148,7 +148,7 @@ def convert_img(src,dest, txt, size):
             src_image=os.path.join(root, jpgs)
             if('.jpg' in src_image):
                 print(src_image)
-                mean_rgb=(128,128,128)
+                mean_rgb=(127.5,127.5,127.5)
                 __create_raw_incv3(src_image,mean_rgb,128,False,False)
 
     with open(txt, 'w') as f:
@@ -162,9 +162,9 @@ def convert_img(src,dest, txt, size):
 
 def main():
     parser = argparse.ArgumentParser(description="Batch convert jpgs",formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-d', '--dest',type=str, default='C:/Users/86529/Desktop/data')
+    parser.add_argument('-d', '--dest',type=str, default='C:/Users/86529/Desktop/7878')
     parser.add_argument('-s','--size',type=int, default=300)
-    parser.add_argument('-i','--img_folder',type=str, default='C:/Users/86529/Desktop/data2')
+    parser.add_argument('-i','--img_folder',type=str, default='C:/Users/86529/Desktop/78')
 
     args = parser.parse_args()
 
