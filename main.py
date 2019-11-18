@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 r1 = requests.get(
     url='https://github.com/login'
 )
-bs1 = BeautifulSoup(r1.text, 'html.parser')  # 对获取到的文本对象解析获取token值
+bs1 = BeautifulSoup(r1.text, 'html.parser')  # 对获取到的文本对象解析获取token值 zlz
 obj_token = bs1.find(
     name='input',
     attrs={'name': 'authenticity_token'}
