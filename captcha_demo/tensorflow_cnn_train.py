@@ -5,8 +5,11 @@ from gen_captcha import alphabet
 from gen_captcha import ALPHABET
 
 import numpy as np
+from datetime import datetime
 import tensorflow as tf
 from captcha_datasets import *
+
+CAPTCHA_TRAIN_MOEDL_DIR = "./captcha_models/train/"
 
 IMAGE_HEIGHT = 60
 IMAGE_WIDTH = 160
@@ -63,7 +66,7 @@ def crack_captcha_cnn(w_alpha=0.01, b_alpha=0.1):
 	return out
 
 # 训练
-def train_captcha_cnn():
+def captcha_train_cnn():
 
 	output = crack_captcha_cnn()
 	loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=output, labels=Y))
@@ -77,26 +80,18 @@ def train_captcha_cnn():
 	accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
 	# 加载数据集
-	tfrecord_list = [CAPTCHA_TFRECORD_PATH + "captcha_" + str(i) + ".tfrecord" for i in range(10)]
-	tfrecord_queue = tf.train.string_input_producer(tfrecord_list, shuffle=False)
-
-	reader = tf.TFRecordReader()
-	_, serialized_example = reader.read(tfrecord_queue)
-	features = tf.parse_single_example(
-		serialized_example,
-		features={
-			'label': tf.FixedLenFeature([], tf.string),
-			'raw': tf.FixedLenFeature([], tf.string)
-		})
-	image_label = tf.decode_raw(features['label'], tf.float64)
-	image_label = tf.reshape(image_label, [252, ])
-	image_raw = tf.decode_raw(features['raw'], tf.float64)
-	image_raw = tf.reshape(image_raw, [9600, ])
-	image_label, image_raw = tf.train.batch([image_label, image_raw],
-											batch_size=CAPTCHA_BATCH_SIZE,
-											capacity=CAPTCHA_CAPACITY,
-											num_threads=CAPTCHA_THREADS)
-
+	train_tfrecord_files = [CAPTCHA_TRAIN_TFRECORD + "train_captcha_" + str(i) + ".tfrecord" for i in
+							range(CAPTCHA_TRAINT_TFRECORD_COUNT)]
+	test_tfrecord_files = [CAPTCHA_TEST_TFRECORD + "test_captcha_" + str(i) + ".tfrecord" for i in
+						   range(CAPTCHA_TEST_TFRECORD_COUNT)]
+	batch_train_x, batch_train_y = get_dataset(train_tfrecord_files)
+	batch_test_x, batch_test_y = get_dataset(test_tfrecord_files)
+	print("batch_train_x :", batch_train_x)
+	print("batch_train_x :", batch_train_y)
+	print("batch_test_x :", batch_test_x)
+	print("batch_test_y :", batch_test_y)
+	batch_train_x = tf.cast(batch_train_x,tf.float32)
+	batch_train_y = tf.cast(batch_train_y, tf.float32)
 
 	saver = tf.train.Saver()
 	with tf.Session() as sess:
@@ -105,17 +100,27 @@ def train_captcha_cnn():
 		coord = tf.train.Coordinator()
 		threads = tf.train.start_queue_runners(sess, coord)
 
-		for i in range(1000000):
-			batch_y, batch_x = sess.run([image_label, image_raw])
-			_, loss_ = sess.run([optimizer, loss], feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.75})
-			if i % 100 == 0:
-				print(i, loss_)
-				if i % 1000 == 0:
-					acc = sess.run(accuracy, feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.9})
-					print(i, acc)
+		try:
+			step = 0
+			while not coord.should_stop():
+				begin_time = datetime.now()
+				batch_train_x_val, batch_train_y_val = sess.run([batch_train_x, batch_train_y])
+				_, loss_ = sess.run([optimizer, loss], feed_dict={X: batch_train_x_val, Y: batch_train_y_val, keep_prob: 0.75})
+				end_time = datetime.now()
+				print("captcha train step : %d loss : %f time : %fms" % (step, loss_, (end_time-begin_time).microseconds))
+				step += 1
+				if step % 10000 == 0:
+					batch_test_x_val, batch_test_y_val = sess.run([batch_test_x, batch_test_y])
+					accuracy_ = sess.run(accuracy, feed_dict={X: batch_test_x_val, Y: batch_test_y_val, keep_prob: 0.9})
+					print("captcha test %d accuracy : %f " % (step, accuracy_))
+					saver.save(sess, CAPTCHA_TRAIN_MOEDL_DIR+ "captcha.model", global_step=step)
+		except tf.errors.OutOfRangeError:
+			print('done!')
+		finally:
+			coord.request_stop()
 
-		coord.request_stop()
 		coord.join(threads)
 
+
 if __name__ == '__main__':
-	train_captcha_cnn()
+	captcha_train_cnn()

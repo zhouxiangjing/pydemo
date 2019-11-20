@@ -3,13 +3,19 @@ import numpy as np
 from PIL import Image
 import random
 import tensorflow as tf
+import os
+import shutil
 
-CAPTCHA_TFRECORD_PATH = "./captcha_tfrecord/"
-CAPTCHA_TFRECORD_COUNT = 10
-CAPTCHA_IMAGE_COUNT = 10000
+CAPTCHA_TRAIN_TFRECORD = "./captcha_tfrecord/train/"
+CAPTCHA_TEST_TFRECORD = "./captcha_tfrecord/test/"
+
+CAPTCHA_TRAINT_TFRECORD_COUNT = 10
+CAPTCHA_TRAINT_PER_TFRECORD_COUNT = 100000
+CAPTCHA_TEST_TFRECORD_COUNT = 10
+CAPTCHA_TEST_PER_TFRECORD_COUNT = 10000
+
+CAPTCHA_EPOCHS = 10
 CAPTCHA_BATCH_SIZE = 32
-CAPTCHA_THREADS = 4
-CAPTCHA_CAPACITY = CAPTCHA_TFRECORD_COUNT*CAPTCHA_BATCH_SIZE*CAPTCHA_THREADS
 
 # 每张图片(raw [n, RAW_LEN] [n, 9600], 宽高为60，160， 转换为灰度图之后降维为一维数组， 数组长度RAW_LEN（9600=60*160）)
 # 每个标识（label [n, LABEL_LEN] [n, 256]， 4个字符,每个字符长度为CHAR_SET_LEN（63=10+26+26+1）,label总长度为LABEL_LEN(252=4*63)）
@@ -111,11 +117,10 @@ def gen_captcha_text_and_image():
     return captcha_text, image
 
 
-def generate_tfrecord():
-    for i in range(CAPTCHA_TFRECORD_COUNT):
-        tfrecord_file = CAPTCHA_TFRECORD_PATH + "captcha_" + str(i) + ".tfrecord"
-        with tf.python_io.TFRecordWriter(tfrecord_file) as writer:
-            for j in range(CAPTCHA_IMAGE_COUNT):
+def generate_tfrecord(tfrecord_files, per_tfrecord_count):
+    for i, file in enumerate(tfrecord_files):
+        with tf.python_io.TFRecordWriter(file) as writer:
+            for j in range(per_tfrecord_count):
                 image = ImageCaptcha()
                 captcha_text = random_captcha_text()
                 captcha_text = ''.join(captcha_text)
@@ -135,42 +140,61 @@ def generate_tfrecord():
                 print('generate tfrecord : %d %d' % (i, j))
 
 
-def get_next_tfrecord():
+def captcha_tfrecord_parser(record):
 
-    tfrecord_list = [CAPTCHA_TFRECORD_PATH + "captcha_" + str(i) + ".tfrecord" for i in range(10)]
-    tfrecord_queue = tf.train.string_input_producer(tfrecord_list, shuffle=False)
-
-    reader = tf.TFRecordReader()
-
-    _, serialized_example = reader.read(tfrecord_queue)
-    features = tf.parse_single_example(serialized_example,
-                                       features={
+    parsed = tf.parse_single_example(record, features={
                                            'label': tf.FixedLenFeature([], tf.string),
                                            'raw': tf.FixedLenFeature([], tf.string)})
-    image_label = tf.decode_raw(features['label'], tf.float64)
-    image_label = tf.reshape(image_label, [252,])
 
-    image_raw = tf.decode_raw(features['raw'], tf.float64)
+    image_raw = tf.decode_raw(parsed['raw'], tf.float64)
     image_raw = tf.reshape(image_raw, [9600, ])
 
-    image_label, image_raw = tf.train.batch([image_label, image_raw],
-                                            batch_size=CAPTCHA_BATCH_SIZE,
-                                            capacity=CAPTCHA_CAPACITY,
-                                            num_threads=CAPTCHA_THREADS)
+    image_label = tf.decode_raw(parsed['label'], tf.float64)
+    image_label = tf.reshape(image_label, [252,])
 
-    with tf.Session() as sess:
-        sess.run(tf.initialize_all_variables())
+    return image_raw, image_label
 
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(sess, coord)
-        batch_x, batch_y = sess.run([image_label, image_raw])
 
-        coord.request_stop()
-        coord.join(threads)
+def get_dataset(tfrecord_list):
+
+    dataset = tf.data.TFRecordDataset(tfrecord_list)
+    dataset = dataset.map(captcha_tfrecord_parser)
+    dataset = dataset.shuffle(buffer_size=10000).batch(CAPTCHA_BATCH_SIZE).repeat(CAPTCHA_EPOCHS)
+
+    iterator = dataset.make_one_shot_iterator()
+    batch_x, batch_y = iterator.get_next()
+    # with tf.Session() as sess:
+    #     try:
+    #         while True:
+    #             print(sess.run([batch_x, batch_y]))
+    #     except tf.errors.OutOfRangeError:
+    #         print("end!")
+
+    return batch_x, batch_y
+
 
 
 if __name__ == '__main__':
 
-    generate_tfrecord()
+    train_tfrecord_files = [CAPTCHA_TRAIN_TFRECORD + "train_captcha_" + str(i) + ".tfrecord" for i in range(CAPTCHA_TRAINT_TFRECORD_COUNT)]
+    test_tfrecord_files = [CAPTCHA_TEST_TFRECORD + "test_captcha_" + str(i) + ".tfrecord" for i in range(CAPTCHA_TEST_TFRECORD_COUNT)]
 
-    # get_next_tfrecord()
+    # if os.path.exists(CAPTCHA_TRAIN_TFRECORD):
+    #     shutil.rmtree(CAPTCHA_TRAIN_TFRECORD)
+    # os.makedirs(CAPTCHA_TRAIN_TFRECORD)
+    # if os.path.exists(CAPTCHA_TEST_TFRECORD):
+    #     shutil.rmtree(CAPTCHA_TEST_TFRECORD)
+    # os.makedirs(CAPTCHA_TEST_TFRECORD)
+    #
+
+    #
+    # generate_tfrecord(train_tfrecord_files, CAPTCHA_TRAINT_PER_TFRECORD_COUNT)
+    # generate_tfrecord(test_tfrecord_files, CAPTCHA_TEST_PER_TFRECORD_COUNT)
+
+    batch_train_x, batch_train_y = get_dataset(train_tfrecord_files)
+    print("batch_train_x :", batch_train_x)
+    print("batch_train_x :", batch_train_y)
+
+    batch_test_x, batch_test_y = get_dataset(test_tfrecord_files)
+    print("batch_test_x :", batch_test_x)
+    print("batch_test_y :", batch_test_y)
