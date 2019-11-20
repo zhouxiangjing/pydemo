@@ -110,8 +110,11 @@ def get_next_batch(batch_size=128):
 		image = convert2gray(image)
 
 		# 将图片数组一维化 同时将文本也对应在两个二维组的同一行
+		aa = image.flatten()
 		batch_x[i,:] = image.flatten() / 255 # (image.flatten()-128)/128  mean为0
+		zz = text2vec(text)
 		batch_y[i,:] = text2vec(text)
+		nn = 0
 	# 返回该训练批次
 	return batch_x, batch_y
 
