@@ -9,7 +9,7 @@ from datetime import datetime
 import tensorflow as tf
 from captcha_datasets import *
 
-CAPTCHA_TRAIN_MOEDL_DIR = "./captcha_models/train/"
+CAPTCHA_TRAIN_MOEDL_DIR = "./captcha_models/"
 
 IMAGE_HEIGHT = 60
 IMAGE_WIDTH = 160
@@ -93,16 +93,20 @@ def captcha_train_cnn():
 	batch_train_x = tf.cast(batch_train_x,tf.float32)
 	batch_train_y = tf.cast(batch_train_y, tf.float32)
 
-	saver = tf.train.Saver()
-	with tf.Session() as sess:
+	gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
+
+	saver = tf.train.Saver(max_to_keep=3)
+	#with tf.Session() as sess:
+	with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
 		sess.run(tf.global_variables_initializer())
 
-		coord = tf.train.Coordinator()
-		threads = tf.train.start_queue_runners(sess, coord)
-
+		ckpt = tf.train.get_checkpoint_state(CAPTCHA_TRAIN_MOEDL_DIR)
+		if ckpt and ckpt.model_checkpoint_path:
+			saver.restore(sess, ckpt.model_checkpoint_path)
+			print("restore model : ", ckpt.model_checkpoint_path)
 		try:
 			step = 0
-			while not coord.should_stop():
+			while True:
 				begin_time = datetime.now()
 				batch_train_x_val, batch_train_y_val = sess.run([batch_train_x, batch_train_y])
 				_, loss_ = sess.run([optimizer, loss], feed_dict={X: batch_train_x_val, Y: batch_train_y_val, keep_prob: 0.75})
@@ -116,10 +120,7 @@ def captcha_train_cnn():
 					saver.save(sess, CAPTCHA_TRAIN_MOEDL_DIR+ "captcha.model", global_step=step)
 		except tf.errors.OutOfRangeError:
 			print('done!')
-		finally:
-			coord.request_stop()
 
-		coord.join(threads)
 
 
 if __name__ == '__main__':
