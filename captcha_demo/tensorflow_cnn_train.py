@@ -73,8 +73,6 @@ def captcha_train_cnn():
     loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=output, labels=Y))
     tf.summary.scalar("loss", loss)
 
-    tf.summary.scalar("loss", loss)
-
     optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss)
 
     predict = tf.reshape(output, [-1, CAPTCHA_MAX_CAPTCHA, CAPTCHA_CHAR_SET_LEN])
@@ -125,14 +123,16 @@ def captcha_train_cnn():
                 batch_train_x_val, batch_train_y_val = sess.run([batch_train_x, batch_train_y])
                 _, loss_, summary = sess.run([optimizer, loss, merged], feed_dict={X: batch_train_x_val, Y: batch_train_y_val, keep_prob: 0.75})
                 end_time = datetime.now()
-                log_writer.add_summary(summary, step)
                 print("captcha train step : %d loss : %f time : %fms" % (step, loss_, (end_time-begin_time).microseconds))
+
                 step += 1
                 if step % 1000 == 0:
                     batch_test_x_val, batch_test_y_val = sess.run([batch_test_x, batch_test_y])
                     accuracy_ = sess.run(accuracy, feed_dict={X: batch_test_x_val, Y: batch_test_y_val, keep_prob: 0.9})
                     print("captcha test %d accuracy : %f " % (step, accuracy_))
                     saver.save(sess, CAPTCHA_TRAIN_MOEDL_DIR+ "captcha.model", global_step=step)
+
+                log_writer.add_summary(summary, step)
         except tf.errors.OutOfRangeError:
             print('done!')
 
