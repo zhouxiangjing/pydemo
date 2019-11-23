@@ -124,7 +124,7 @@ def captcha_train_cnn():
                     batch_test_x_val, batch_test_y_val = sess.run([batch_test_x, batch_test_y])
                     accuracy_ = sess.run(accuracy, feed_dict={X: batch_test_x_val, Y: batch_test_y_val, keep_prob: 1.0})
                     print("captcha test %d accuracy : %f " % (step, accuracy_))
-                    saver.save(sess, CAPTCHA_TRAIN_MOEDL_DIR+ "captcha.model", global_step=step)
+                    saver.save(sess, CAPTCHA_TRAIN_MOEDL_DIR+ "captcha.ckpt", global_step=step)
 
                 log_writer.add_summary(summary, step)
         except tf.errors.OutOfRangeError:
