@@ -1,9 +1,3 @@
-#coding:utf-8
-from gen_captcha import gen_captcha_text_and_image
-from gen_captcha import number
-from gen_captcha import alphabet
-from gen_captcha import ALPHABET
-
 import numpy as np
 from datetime import datetime
 import tensorflow as tf
@@ -88,8 +82,8 @@ def captcha_train_cnn():
                             range(CAPTCHA_TRAINT_TFRECORD_COUNT)]
     test_tfrecord_files = [CAPTCHA_TEST_TFRECORD + "test_captcha_" + str(i) + ".tfrecord" for i in
                            range(CAPTCHA_TEST_TFRECORD_COUNT)]
-    batch_train_x, batch_train_y = get_dataset(train_tfrecord_files)
-    batch_test_x, batch_test_y = get_dataset(test_tfrecord_files)
+    batch_train_x, batch_train_y = get_dataset(train_tfrecord_files, CAPTCHA_TRAIN_BATCH_SIZE, CAPTCHA_TRAIN_EPOCHS)
+    batch_test_x, batch_test_y = get_dataset(test_tfrecord_files, CAPTCHA_TEST_BATCH_SIZE, CAPTCHA_TEST_EPOCHS)
     print("batch_train_x :", batch_train_x)
     print("batch_train_x :", batch_train_y)
     print("batch_test_x :", batch_test_x)
@@ -126,9 +120,9 @@ def captcha_train_cnn():
                 print("captcha train step : %d loss : %f time : %fms" % (step, loss_, (end_time-begin_time).microseconds))
 
                 step += 1
-                if step % 1000 == 0:
+                if step % 100 == 0:
                     batch_test_x_val, batch_test_y_val = sess.run([batch_test_x, batch_test_y])
-                    accuracy_ = sess.run(accuracy, feed_dict={X: batch_test_x_val, Y: batch_test_y_val, keep_prob: 0.9})
+                    accuracy_ = sess.run(accuracy, feed_dict={X: batch_test_x_val, Y: batch_test_y_val, keep_prob: 1.0})
                     print("captcha test %d accuracy : %f " % (step, accuracy_))
                     saver.save(sess, CAPTCHA_TRAIN_MOEDL_DIR+ "captcha.model", global_step=step)
 

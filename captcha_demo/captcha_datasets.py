@@ -14,8 +14,11 @@ CAPTCHA_TRAINT_PER_TFRECORD_COUNT = 100000
 CAPTCHA_TEST_TFRECORD_COUNT = 10
 CAPTCHA_TEST_PER_TFRECORD_COUNT = 10000
 
-CAPTCHA_EPOCHS = 10
-CAPTCHA_BATCH_SIZE = 32
+CAPTCHA_TRAIN_EPOCHS = 10
+CAPTCHA_TRAIN_BATCH_SIZE = 64
+
+CAPTCHA_TEST_EPOCHS = 10
+CAPTCHA_TEST_BATCH_SIZE = 100
 
 # 每张图片(raw [n, RAW_LEN] [n, 9600], 宽高为60，160， 转换为灰度图之后降维为一维数组， 数组长度RAW_LEN（9600=60*160）)
 # 每个标识（label [n, LABEL_LEN] [n, 256]， 4个字符,每个字符长度为CHAR_SET_LEN（63=10+26+26+1）,label总长度为LABEL_LEN(252=4*63)）
@@ -155,11 +158,11 @@ def captcha_tfrecord_parser(record):
     return image_raw, image_label
 
 
-def get_dataset(tfrecord_list):
+def get_dataset(tfrecord_list, batch_size, epochs):
 
     dataset = tf.data.TFRecordDataset(tfrecord_list)
     dataset = dataset.map(captcha_tfrecord_parser)
-    dataset = dataset.shuffle(buffer_size=10000).batch(CAPTCHA_BATCH_SIZE).repeat(CAPTCHA_EPOCHS)
+    dataset = dataset.shuffle(buffer_size=10000).batch(batch_size).repeat(epochs)
 
     iterator = dataset.make_one_shot_iterator()
     batch_x, batch_y = iterator.get_next()
