@@ -190,17 +190,16 @@ if __name__ == '__main__':
     # os.makedirs(CAPTCHA_TEST_TFRECORD)
     #
 
-    #
-    # generate_tfrecord(train_tfrecord_files, CAPTCHA_TRAINT_PER_TFRECORD_COUNT)
-    # generate_tfrecord(test_tfrecord_files, CAPTCHA_TEST_PER_TFRECORD_COUNT)
+    generate_tfrecord(train_tfrecord_files, CAPTCHA_TRAINT_PER_TFRECORD_COUNT)
+    generate_tfrecord(test_tfrecord_files, CAPTCHA_TEST_PER_TFRECORD_COUNT)
 
-    # batch_train_x, batch_train_y = get_dataset(train_tfrecord_files)
-    # print("batch_train_x :", batch_train_x)
-    # print("batch_train_x :", batch_train_y)
-    #
-    # batch_test_x, batch_test_y = get_dataset(test_tfrecord_files)
-    # print("batch_test_x :", batch_test_x)
-    # print("batch_test_y :", batch_test_y)
+    batch_train_x, batch_train_y = get_dataset(train_tfrecord_files)
+    print("batch_train_x :", batch_train_x)
+    print("batch_train_x :", batch_train_y)
+
+    batch_test_x, batch_test_y = get_dataset(test_tfrecord_files)
+    print("batch_test_x :", batch_test_x)
+    print("batch_test_y :", batch_test_y)
 
     # for i in range(10):
     #     gen_captcha_text_and_image()
