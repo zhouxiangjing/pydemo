@@ -1,10 +1,9 @@
 import tensorflow as tf
-from tensorflow.python.framework import graph_util
 from tensorflow.python.platform import gfile
 from PIL import Image
 import numpy as np
 
-model_file = 'F:\demo\\py\\pydemo\\ai_demo\\mnist\\model\\mnist.pb'
+model_file = './model/mnist.pb'
 
 with tf.Session() as sess:
     with gfile.FastGFile(model_file, 'rb') as f:  # 加载模型
